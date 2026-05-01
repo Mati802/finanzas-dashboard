@@ -12,6 +12,45 @@ import type { Asset, Liability } from '@prisma/client';
 import type { AssetKind, AssetType, Currency, PriceSource, RateType } from '@/lib/types';
 import { CEDEAR_LIST } from '@/lib/rates/cedears';
 
+// Stablecoins: cripto que vale ~1 USD. Cuando un asset crypto es stablecoin
+// se trata como 'wallet' (saldo en exchange/billetera), no como inversión.
+const STABLECOIN_TICKERS = new Set([
+  'USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'FDUSD', 'USDP', 'PYUSD',
+]);
+
+/**
+ * Determina el `kind` (wallet | investment | object) de un asset.
+ *
+ * Algunos tipos son inequívocos y se fuerzan: un CEDEAR (type='stock') es
+ * SIEMPRE una inversión; una propiedad (type='property') es SIEMPRE un objeto;
+ * el efectivo (type='cash_usd'|'cash_ars') es SIEMPRE una wallet. Esto evita
+ * que filas legacy con `kind` mal seteado o vacío contaminen el desglose del
+ * patrimonio en el dashboard (donde inversiones se sumaban en cuentas/bancos).
+ *
+ * Para cripto sí respetamos lo que eligió el usuario, porque USDT en un
+ * exchange puede ser wallet o investment según el caso. Si no hay valor
+ * almacenado, inferimos: stablecoin → wallet, resto → investment.
+ */
+function resolveAssetKind(
+  type: AssetType,
+  ticker: string | null,
+  storedKind: string | undefined | null
+): AssetKind {
+  if (type === 'stock') return 'investment';
+  if (type === 'property') return 'object';
+  if (type === 'cash_usd' || type === 'cash_ars') return 'wallet';
+
+  if (storedKind === 'wallet' || storedKind === 'investment' || storedKind === 'object') {
+    return storedKind;
+  }
+
+  if (type === 'crypto') {
+    const t = ticker?.toUpperCase() ?? '';
+    return t && STABLECOIN_TICKERS.has(t) ? 'wallet' : 'investment';
+  }
+  return 'wallet';
+}
+
 export interface AssetWithValue {
   id: number;
   name: string;
@@ -128,7 +167,11 @@ export async function listAssetsWithValues(): Promise<AssetWithValue[]> {
       id: a.id,
       name: a.name,
       type: a.type as AssetType,
-      kind: ((a as unknown as { kind?: string }).kind as AssetKind | undefined) ?? 'wallet',
+      kind: resolveAssetKind(
+        a.type as AssetType,
+        a.ticker,
+        (a as unknown as { kind?: string }).kind
+      ),
       ticker: a.ticker,
       priceSource: (a.priceSource as PriceSource | null) ?? null,
       quantity: qty,
