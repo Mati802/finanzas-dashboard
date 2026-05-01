@@ -1,0 +1,506 @@
+<h2>Dashboard v3 — ticker reordenado + más gráficos + tooltips</h2>
+<p class="subtitle">Ticker: BTC · ADA · SP500 · Oficial · Blue · USDT. Más gráficos abajo. Pasá el mouse por el área chart y el de barras para ver tooltip.</p>
+
+<style>
+  .ff-root {
+    background: #08080c;
+    border-radius: 16px;
+    color: #e4e4e7;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    overflow: hidden;
+    border: 1px solid #1a1a22;
+  }
+
+  .ff-ticker {
+    display: flex;
+    gap: 28px;
+    padding: 9px 20px;
+    background: #0a0a10;
+    border-bottom: 1px solid #17171f;
+    font-size: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ff-ticker-item { display: inline-flex; gap: 6px; align-items: center; }
+  .ff-ticker-label { color: #71717a; font-weight: 600; letter-spacing: 0.3px; }
+  .ff-ticker-val { color: #e4e4e7; font-weight: 600; }
+  .ff-ticker-delta { font-size: 9px; }
+  .ff-up { color: #4ade80; }
+  .ff-down { color: #f87171; }
+
+  .ff-layout { display: grid; grid-template-columns: 180px 1fr; min-height: 600px; }
+
+  .ff-side {
+    background: #0a0a10;
+    border-right: 1px solid #17171f;
+    padding: 16px 10px;
+  }
+  .ff-logo {
+    display: flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 13px;
+    padding: 6px 8px; margin-bottom: 20px;
+  }
+  .ff-logo-box {
+    width: 22px; height: 22px;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ff-nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 10px; border-radius: 8px;
+    font-size: 11px; color: #71717a;
+    margin: 2px 0;
+  }
+  .ff-nav-item.active { background: #17171f; color: #fff; }
+  .ff-nav-item.active .ff-icon { color: #a78bfa; }
+  .ff-icon { width: 14px; height: 14px; flex-shrink: 0; }
+
+  .ff-main { padding: 20px; overflow: hidden; }
+  .ff-header { display: flex; justify-content: space-between; margin-bottom: 18px; }
+  .ff-title { font-size: 20px; font-weight: 700; color: #fff; }
+  .ff-sub { font-size: 11px; color: #71717a; margin-top: 4px; }
+
+  .ff-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .ff-kpi {
+    position: relative; padding: 14px; border-radius: 12px;
+    background: linear-gradient(180deg, rgba(139, 92, 246, 0.08), transparent), #0d0d14;
+    border: 1px solid #1a1a22;
+    overflow: hidden;
+  }
+  .ff-kpi.purple { background: linear-gradient(180deg, rgba(139, 92, 246, 0.08), transparent), #0d0d14; }
+  .ff-kpi.green  { background: linear-gradient(180deg, rgba(74, 222, 128, 0.08), transparent), #0d0d14; }
+  .ff-kpi.red    { background: linear-gradient(180deg, rgba(248, 113, 113, 0.08), transparent), #0d0d14; }
+  .ff-kpi.orange { background: linear-gradient(180deg, rgba(251, 146, 60, 0.08), transparent), #0d0d14; }
+
+  .ff-kpi-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .ff-kpi-label { font-size: 9px; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.5px; }
+  .ff-kpi-icon-box { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: #17171f; }
+  .ff-kpi-value { font-size: 17px; font-weight: 700; color: #fff; }
+  .ff-kpi-sub { font-size: 10px; margin-top: 4px; display: flex; gap: 4px; }
+  .ff-spark { position: absolute; right: 10px; bottom: 10px; width: 50px; height: 18px; opacity: 0.8; }
+
+  .ff-chart-row { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .ff-chart-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .ff-chart-row-3 { display: grid; grid-template-columns: 1fr; gap: 10px; }
+
+  .ff-card {
+    background: #0d0d14;
+    border: 1px solid #1a1a22;
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .ff-card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .ff-card-title { font-size: 12px; font-weight: 600; color: #fff; }
+  .ff-card-sub { font-size: 10px; color: #71717a; }
+  .ff-pill { font-size: 9px; padding: 3px 8px; border-radius: 6px; background: #17171f; color: #a1a1aa; }
+
+  /* Interactive area chart SVG */
+  .ff-area-chart { width: 100%; height: 150px; cursor: crosshair; }
+  .ff-axis-label { font-size: 8px; fill: #71717a; font-family: 'Inter', sans-serif; }
+  .ff-grid-line { stroke: #17171f; stroke-width: 0.5; }
+
+  .ff-tooltip {
+    position: absolute;
+    background: #1a1a22;
+    border: 1px solid #2a2a32;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 10px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.1s;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    min-width: 130px;
+    z-index: 10;
+  }
+  .ff-tooltip .ff-tt-date { color: #71717a; font-size: 9px; }
+  .ff-tooltip .ff-tt-val { color: #fff; font-weight: 700; margin-top: 2px; }
+  .ff-tooltip .ff-tt-line { display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+
+  /* Donut */
+  .ff-donut-wrap { display: flex; align-items: center; gap: 14px; }
+  .ff-donut-svg { width: 110px; height: 110px; }
+  .ff-legend { font-size: 10px; color: #a1a1aa; }
+  .ff-legend-item { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+  .ff-dot { width: 7px; height: 7px; border-radius: 2px; }
+  .ff-legend-val { color: #fff; margin-left: auto; font-weight: 600; }
+
+  .card-body { padding: 0 !important; }
+
+  .ff-chart-container { position: relative; }
+
+  /* Category breakdown bars */
+  .ff-cat-row { display: flex; align-items: center; justify-content: space-between; margin: 6px 0; font-size: 10px; }
+  .ff-cat-label { color: #a1a1aa; width: 100px; }
+  .ff-cat-bar-bg { flex: 1; height: 6px; background: #17171f; border-radius: 3px; margin: 0 10px; overflow: hidden; }
+  .ff-cat-bar-fill { height: 100%; border-radius: 3px; }
+  .ff-cat-val { color: #fff; font-weight: 600; width: 80px; text-align: right; }
+</style>
+
+<div class="mockup">
+  <div class="mockup-header">Dashboard v3 — ticker reordenado + gráficos interactivos</div>
+  <div class="mockup-body" style="padding:0">
+    <div class="ff-root">
+      <!-- TICKER reordenado -->
+      <div class="ff-ticker">
+        <div class="ff-ticker-item">
+          <span class="ff-ticker-label">BTC/USD</span>
+          <span class="ff-ticker-val">$94.820</span>
+          <span class="ff-ticker-delta ff-down">-1.4%</span>
+        </div>
+        <div class="ff-ticker-item">
+          <span class="ff-ticker-label">ADA/USD</span>
+          <span class="ff-ticker-val">$0.645</span>
+          <span class="ff-ticker-delta ff-up">+2.1%</span>
+        </div>
+        <div class="ff-ticker-item">
+          <span class="ff-ticker-label">SP500</span>
+          <span class="ff-ticker-val">5.842,30</span>
+          <span class="ff-ticker-delta ff-up">+0.32%</span>
+        </div>
+        <div class="ff-ticker-item">
+          <span class="ff-ticker-label">OFICIAL</span>
+          <span class="ff-ticker-val">$1.078</span>
+          <span class="ff-ticker-delta ff-up">+0.01%</span>
+        </div>
+        <div class="ff-ticker-item">
+          <span class="ff-ticker-label">BLUE</span>
+          <span class="ff-ticker-val">$1.465</span>
+          <span class="ff-ticker-delta ff-up">+0.34%</span>
+        </div>
+        <div class="ff-ticker-item">
+          <span class="ff-ticker-label">USDT</span>
+          <span class="ff-ticker-val">$1.458</span>
+          <span class="ff-ticker-delta ff-up">+0.22%</span>
+        </div>
+      </div>
+
+      <div class="ff-layout">
+        <!-- SIDEBAR -->
+        <aside class="ff-side">
+          <div class="ff-logo">
+            <div class="ff-logo-box">
+              <svg class="ff-icon" style="color:#fff" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            </div>
+            Finanzas
+          </div>
+          <div class="ff-nav-item active">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+            Dashboard
+          </div>
+          <div class="ff-nav-item">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
+            Transacciones
+          </div>
+          <div class="ff-nav-item">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            Ingresos
+          </div>
+          <div class="ff-nav-item">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+            Gastos
+          </div>
+          <div class="ff-nav-item">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            Inversiones
+          </div>
+          <div class="ff-nav-item">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+            Patrimonio
+          </div>
+          <div class="ff-nav-item">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Reportes
+          </div>
+        </aside>
+
+        <!-- MAIN -->
+        <div class="ff-main">
+          <div class="ff-header">
+            <div>
+              <div class="ff-title">Dashboard</div>
+              <div class="ff-sub">Administrá y optimizá tu situación financiera</div>
+            </div>
+            <div class="ff-pill">Abril 2026 ▾</div>
+          </div>
+
+          <!-- KPIs -->
+          <div class="ff-kpi-grid">
+            <div class="ff-kpi purple">
+              <div class="ff-kpi-head">
+                <div class="ff-kpi-label">Patrimonio</div>
+                <div class="ff-kpi-icon-box" style="background:rgba(139,92,246,0.15)">
+                  <svg class="ff-icon" style="color:#a78bfa" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+                </div>
+              </div>
+              <div class="ff-kpi-value">USD 12.450</div>
+              <div class="ff-kpi-sub ff-up">▲ 5,2%</div>
+              <svg class="ff-spark" viewBox="0 0 50 18"><polyline points="0,15 10,12 20,13 30,8 40,5 50,3" fill="none" stroke="#a78bfa" stroke-width="1.5"/></svg>
+            </div>
+            <div class="ff-kpi green">
+              <div class="ff-kpi-head">
+                <div class="ff-kpi-label">Ingresos</div>
+                <div class="ff-kpi-icon-box" style="background:rgba(74,222,128,0.15)">
+                  <svg class="ff-icon" style="color:#4ade80" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                </div>
+              </div>
+              <div class="ff-kpi-value">USD 150</div>
+              <div class="ff-kpi-sub" style="color:#a1a1aa">ARS 219.750</div>
+              <svg class="ff-spark" viewBox="0 0 50 18"><polyline points="0,15 10,14 20,10 30,12 40,7 50,5" fill="none" stroke="#4ade80" stroke-width="1.5"/></svg>
+            </div>
+            <div class="ff-kpi red">
+              <div class="ff-kpi-head">
+                <div class="ff-kpi-label">Gastos</div>
+                <div class="ff-kpi-icon-box" style="background:rgba(248,113,113,0.15)">
+                  <svg class="ff-icon" style="color:#f87171" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+                </div>
+              </div>
+              <div class="ff-kpi-value">ARS 152.933</div>
+              <div class="ff-kpi-sub ff-down">▼ 2,4%</div>
+              <svg class="ff-spark" viewBox="0 0 50 18"><polyline points="0,5 10,8 20,6 30,10 40,12 50,14" fill="none" stroke="#f87171" stroke-width="1.5"/></svg>
+            </div>
+            <div class="ff-kpi orange">
+              <div class="ff-kpi-head">
+                <div class="ff-kpi-label">Balance</div>
+                <div class="ff-kpi-icon-box" style="background:rgba(251,146,60,0.15)">
+                  <svg class="ff-icon" style="color:#fb923c" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                </div>
+              </div>
+              <div class="ff-kpi-value">+ARS 66.817</div>
+              <div class="ff-kpi-sub ff-up">▲ 22%</div>
+              <svg class="ff-spark" viewBox="0 0 50 18"><polyline points="0,12 10,9 20,10 30,6 40,7 50,3" fill="none" stroke="#fb923c" stroke-width="1.5"/></svg>
+            </div>
+          </div>
+
+          <!-- Row 1: evolución patrimonio + asignación -->
+          <div class="ff-chart-row">
+            <div class="ff-card ff-chart-container">
+              <div class="ff-card-head">
+                <div>
+                  <div class="ff-card-title">Evolución del Patrimonio</div>
+                  <div class="ff-card-sub">Valor total a lo largo del tiempo</div>
+                </div>
+                <div class="ff-pill">Este Año ▾</div>
+              </div>
+              <svg class="ff-area-chart" viewBox="0 0 500 170" preserveAspectRatio="none" id="areaChart1">
+                <defs>
+                  <linearGradient id="grad1" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#8b5cf6" stop-opacity="0.4"/>
+                    <stop offset="100%" stop-color="#8b5cf6" stop-opacity="0"/>
+                  </linearGradient>
+                </defs>
+                <!-- Grid -->
+                <line class="ff-grid-line" x1="40" y1="20" x2="500" y2="20"/>
+                <line class="ff-grid-line" x1="40" y1="55" x2="500" y2="55"/>
+                <line class="ff-grid-line" x1="40" y1="90" x2="500" y2="90"/>
+                <line class="ff-grid-line" x1="40" y1="125" x2="500" y2="125"/>
+                <!-- Y axis labels -->
+                <text class="ff-axis-label" x="5" y="23">15k</text>
+                <text class="ff-axis-label" x="5" y="58">12k</text>
+                <text class="ff-axis-label" x="5" y="93">9k</text>
+                <text class="ff-axis-label" x="5" y="128">6k</text>
+                <text class="ff-axis-label" x="5" y="155">3k</text>
+                <!-- X axis labels -->
+                <text class="ff-axis-label" x="50" y="165">Ene</text>
+                <text class="ff-axis-label" x="130" y="165">Feb</text>
+                <text class="ff-axis-label" x="210" y="165">Mar</text>
+                <text class="ff-axis-label" x="290" y="165">Abr</text>
+                <!-- Data -->
+                <path d="M40,130 C80,120 120,115 160,90 C200,65 240,75 280,50 C320,30 380,40 430,25 L430,150 L40,150 Z" fill="url(#grad1)"/>
+                <path d="M40,130 C80,120 120,115 160,90 C200,65 240,75 280,50 C320,30 380,40 430,25" stroke="#8b5cf6" stroke-width="2" fill="none"/>
+                <!-- Hover indicator (demo) -->
+                <line id="hoverLine1" x1="280" y1="20" x2="280" y2="150" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="3,3" opacity="0.6"/>
+                <circle cx="280" cy="50" r="4" fill="#8b5cf6" stroke="#fff" stroke-width="1.5"/>
+              </svg>
+              <div class="ff-tooltip" id="tooltip1" style="opacity:1; left: 240px; top: 60px;">
+                <div class="ff-tt-date">15 Marzo 2026</div>
+                <div class="ff-tt-line"><span class="ff-dot" style="background:#8b5cf6"></span><span>Patrimonio</span><span style="margin-left:auto; color:#fff; font-weight:700">USD 10.820</span></div>
+              </div>
+            </div>
+
+            <div class="ff-card">
+              <div class="ff-card-head">
+                <div class="ff-card-title">Asignación de Activos</div>
+              </div>
+              <div class="ff-donut-wrap">
+                <svg class="ff-donut-svg" viewBox="0 0 42 42">
+                  <circle cx="21" cy="21" r="15.9" fill="none" stroke="#17171f" stroke-width="6"/>
+                  <circle cx="21" cy="21" r="15.9" fill="none" stroke="#8b5cf6" stroke-width="6" stroke-dasharray="45 55" stroke-dashoffset="25" transform="rotate(-90 21 21)"/>
+                  <circle cx="21" cy="21" r="15.9" fill="none" stroke="#4ade80" stroke-width="6" stroke-dasharray="35 65" stroke-dashoffset="-20" transform="rotate(-90 21 21)"/>
+                  <circle cx="21" cy="21" r="15.9" fill="none" stroke="#fb923c" stroke-width="6" stroke-dasharray="20 80" stroke-dashoffset="-55" transform="rotate(-90 21 21)"/>
+                </svg>
+                <div class="ff-legend" style="flex:1">
+                  <div class="ff-legend-item"><span class="ff-dot" style="background:#8b5cf6"></span>USD<span class="ff-legend-val">45%</span></div>
+                  <div class="ff-legend-item"><span class="ff-dot" style="background:#4ade80"></span>Inversiones<span class="ff-legend-val">35%</span></div>
+                  <div class="ff-legend-item"><span class="ff-dot" style="background:#fb923c"></span>ARS<span class="ff-legend-val">20%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 2: comparativa 2025 vs 2026 + breakdown gastos -->
+          <div class="ff-chart-row-2">
+            <div class="ff-card ff-chart-container">
+              <div class="ff-card-head">
+                <div>
+                  <div class="ff-card-title">Ingresos 2025 vs 2026</div>
+                  <div class="ff-card-sub">Comparativa mensual (USD)</div>
+                </div>
+                <div style="display:flex; gap:10px; font-size:10px;">
+                  <span><span class="ff-dot" style="background:#64748b; display:inline-block; margin-right:4px"></span>2025</span>
+                  <span><span class="ff-dot" style="background:#8b5cf6; display:inline-block; margin-right:4px"></span>2026</span>
+                </div>
+              </div>
+              <svg class="ff-area-chart" viewBox="0 0 500 170" preserveAspectRatio="none">
+                <line class="ff-grid-line" x1="40" y1="20" x2="500" y2="20"/>
+                <line class="ff-grid-line" x1="40" y1="55" x2="500" y2="55"/>
+                <line class="ff-grid-line" x1="40" y1="90" x2="500" y2="90"/>
+                <line class="ff-grid-line" x1="40" y1="125" x2="500" y2="125"/>
+                <text class="ff-axis-label" x="5" y="23">2k</text>
+                <text class="ff-axis-label" x="5" y="58">1.5k</text>
+                <text class="ff-axis-label" x="5" y="93">1k</text>
+                <text class="ff-axis-label" x="5" y="128">500</text>
+                <text class="ff-axis-label" x="5" y="155">0</text>
+                <text class="ff-axis-label" x="50" y="165">E</text>
+                <text class="ff-axis-label" x="85" y="165">F</text>
+                <text class="ff-axis-label" x="120" y="165">M</text>
+                <text class="ff-axis-label" x="155" y="165">A</text>
+                <text class="ff-axis-label" x="190" y="165">M</text>
+                <text class="ff-axis-label" x="225" y="165">J</text>
+                <text class="ff-axis-label" x="260" y="165">J</text>
+                <text class="ff-axis-label" x="295" y="165">A</text>
+                <text class="ff-axis-label" x="330" y="165">S</text>
+                <text class="ff-axis-label" x="365" y="165">O</text>
+                <text class="ff-axis-label" x="400" y="165">N</text>
+                <text class="ff-axis-label" x="435" y="165">D</text>
+
+                <!-- Línea 2025 -->
+                <polyline points="55,150 90,112 125,130 160,130 195,136 230,28 265,94 300,66 335,150 370,143 405,140 440,130" stroke="#64748b" stroke-width="1.8" fill="none"/>
+                <!-- Línea 2026 -->
+                <polyline points="55,129 90,121 125,150 160,140" stroke="#8b5cf6" stroke-width="2" fill="none"/>
+                <circle cx="55" cy="129" r="3" fill="#8b5cf6"/>
+                <circle cx="90" cy="121" r="3" fill="#8b5cf6"/>
+                <circle cx="125" cy="150" r="3" fill="#8b5cf6"/>
+                <circle cx="160" cy="140" r="4" fill="#8b5cf6" stroke="#fff" stroke-width="1.5"/>
+
+                <line x1="160" y1="20" x2="160" y2="150" stroke="#8b5cf6" stroke-width="1" stroke-dasharray="3,3" opacity="0.5"/>
+              </svg>
+              <div class="ff-tooltip" style="opacity:1; left: 130px; top: 60px;">
+                <div class="ff-tt-date">Abril</div>
+                <div class="ff-tt-line"><span class="ff-dot" style="background:#64748b"></span>2025<span style="margin-left:auto; color:#fff; font-weight:700">USD 300</span></div>
+                <div class="ff-tt-line"><span class="ff-dot" style="background:#8b5cf6"></span>2026<span style="margin-left:auto; color:#fff; font-weight:700">USD 150</span></div>
+              </div>
+            </div>
+
+            <div class="ff-card">
+              <div class="ff-card-head">
+                <div class="ff-card-title">Top categorías de gasto</div>
+                <div class="ff-pill">Abril</div>
+              </div>
+              <div class="ff-cat-row">
+                <span class="ff-cat-label">Movistar</span>
+                <div class="ff-cat-bar-bg"><div class="ff-cat-bar-fill" style="width:100%; background:#8b5cf6"></div></div>
+                <span class="ff-cat-val">ARS 43.996</span>
+              </div>
+              <div class="ff-cat-row">
+                <span class="ff-cat-label">Claude</span>
+                <div class="ff-cat-bar-bg"><div class="ff-cat-bar-fill" style="width:68%; background:#a78bfa"></div></div>
+                <span class="ff-cat-val">ARS 30.000</span>
+              </div>
+              <div class="ff-cat-row">
+                <span class="ff-cat-label">Juegos</span>
+                <div class="ff-cat-bar-bg"><div class="ff-cat-bar-fill" style="width:68%; background:#fb923c"></div></div>
+                <span class="ff-cat-val">ARS 30.000</span>
+              </div>
+              <div class="ff-cat-row">
+                <span class="ff-cat-label">Adobe</span>
+                <div class="ff-cat-bar-bg"><div class="ff-cat-bar-fill" style="width:45%; background:#4ade80"></div></div>
+                <span class="ff-cat-val">ARS 20.000</span>
+              </div>
+              <div class="ff-cat-row">
+                <span class="ff-cat-label">Comidas</span>
+                <div class="ff-cat-bar-bg"><div class="ff-cat-bar-fill" style="width:30%; background:#64748b"></div></div>
+                <span class="ff-cat-val">ARS 13.230</span>
+              </div>
+              <div class="ff-cat-row">
+                <span class="ff-cat-label">Uber</span>
+                <div class="ff-cat-bar-bg"><div class="ff-cat-bar-fill" style="width:23%; background:#64748b"></div></div>
+                <span class="ff-cat-val">ARS 10.247</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 3: Flujo mensual con hover -->
+          <div class="ff-chart-row-3">
+            <div class="ff-card ff-chart-container">
+              <div class="ff-card-head">
+                <div>
+                  <div class="ff-card-title">Flujo de caja mensual</div>
+                  <div class="ff-card-sub">Ingresos vs gastos por mes (ARS)</div>
+                </div>
+                <div style="display:flex; gap:10px; font-size:10px;">
+                  <span><span class="ff-dot" style="background:#4ade80; display:inline-block; margin-right:4px"></span>Ingresos</span>
+                  <span><span class="ff-dot" style="background:#f87171; display:inline-block; margin-right:4px"></span>Gastos</span>
+                </div>
+              </div>
+              <svg class="ff-area-chart" viewBox="0 0 500 170" preserveAspectRatio="none" style="height:180px">
+                <line class="ff-grid-line" x1="40" y1="20" x2="500" y2="20"/>
+                <line class="ff-grid-line" x1="40" y1="55" x2="500" y2="55"/>
+                <line class="ff-grid-line" x1="40" y1="90" x2="500" y2="90"/>
+                <line class="ff-grid-line" x1="40" y1="125" x2="500" y2="125"/>
+                <text class="ff-axis-label" x="5" y="23">600k</text>
+                <text class="ff-axis-label" x="5" y="58">450k</text>
+                <text class="ff-axis-label" x="5" y="93">300k</text>
+                <text class="ff-axis-label" x="5" y="128">150k</text>
+                <text class="ff-axis-label" x="5" y="155">0</text>
+                <text class="ff-axis-label" x="70" y="165">Ene</text>
+                <text class="ff-axis-label" x="170" y="165">Feb</text>
+                <text class="ff-axis-label" x="270" y="165">Mar</text>
+                <text class="ff-axis-label" x="370" y="165">Abr</text>
+
+                <!-- Bars pairs -->
+                <rect x="60" y="75" width="18" height="75" fill="#4ade80" rx="2"/>
+                <rect x="82" y="57" width="18" height="93" fill="#f87171" rx="2"/>
+                <rect x="160" y="80" width="18" height="70" fill="#4ade80" rx="2"/>
+                <rect x="182" y="95" width="18" height="55" fill="#f87171" rx="2"/>
+                <rect x="260" y="120" width="18" height="30" fill="#4ade80" rx="2"/>
+                <rect x="282" y="42" width="18" height="108" fill="#f87171" rx="2"/>
+                <rect x="360" y="45" width="18" height="105" fill="#4ade80" rx="2" opacity="0.9"/>
+                <rect x="382" y="115" width="18" height="35" fill="#f87171" rx="2" opacity="0.9"/>
+
+                <!-- Hover indicator -->
+                <rect x="358" y="18" width="44" height="132" fill="#8b5cf6" opacity="0.08" rx="3"/>
+              </svg>
+              <div class="ff-tooltip" style="opacity:1; left: 320px; top: 30px;">
+                <div class="ff-tt-date">Abril 2026</div>
+                <div class="ff-tt-line"><span class="ff-dot" style="background:#4ade80"></span>Ingresos<span style="margin-left:auto; color:#fff; font-weight:700">ARS 219.750</span></div>
+                <div class="ff-tt-line"><span class="ff-dot" style="background:#f87171"></span>Gastos<span style="margin-left:auto; color:#fff; font-weight:700">ARS 152.933</span></div>
+                <div class="ff-tt-line"><span style="margin-left:auto; color:#a78bfa; font-weight:700">Balance: +ARS 66.817</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px; padding:14px; background:#111; border-radius:8px; border:1px solid #222">
+  <h3 style="margin:0 0 8px 0">Cambios aplicados</h3>
+  <ul style="font-size:12px; color:#bbb; margin:0; padding-left:18px; line-height:1.7">
+    <li><strong>Ticker reordenado</strong>: BTC/USD → ADA/USD → SP500 → Oficial → Blue → USDT</li>
+    <li><strong>3 gráficos nuevos en el dashboard</strong>:
+      <ul>
+        <li>Evolución del Patrimonio (área)</li>
+        <li>Ingresos 2025 vs 2026 (dos líneas comparativas)</li>
+        <li>Flujo de caja mensual (barras ingresos vs gastos)</li>
+      </ul>
+    </li>
+    <li><strong>Tooltips visibles</strong>: simulados en 3 posiciones para que veas cómo se ven al hacer hover (fecha + valor por serie)</li>
+    <li><strong>Ejes con labels</strong>: eje Y con valores (15k, 12k...), eje X con meses</li>
+    <li><strong>Grid sutil</strong>: líneas horizontales de referencia en cada gráfico</li>
+    <li><strong>Top categorías de gasto</strong>: barras horizontales con % visual</li>
+  </ul>
+  <p style="font-size:11px; color:#71717a; margin-top:10px">En la app real los tooltips aparecen al pasar el mouse (no estáticos). Acá los dejé visibles para ilustrar.</p>
+</div>

@@ -1,0 +1,350 @@
+<h2>Dashboard premium — estilo FinSpace</h2>
+<p class="subtitle">Iconos SVG limpios (Lucide), acentos sutiles por tarjeta, sparklines, ticker de cotizaciones arriba. Este sería el diseño final.</p>
+
+<style>
+  .ff-root {
+    background: #08080c;
+    border-radius: 16px;
+    padding: 0;
+    color: #e4e4e7;
+    font-family: 'Inter', -apple-system, system-ui, sans-serif;
+    overflow: hidden;
+    border: 1px solid #1a1a22;
+  }
+
+  /* Ticker superior */
+  .ff-ticker {
+    display: flex;
+    gap: 24px;
+    padding: 8px 20px;
+    background: #0a0a10;
+    border-bottom: 1px solid #17171f;
+    font-size: 10px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ff-ticker-item { display: inline-flex; gap: 6px; align-items: center; }
+  .ff-ticker-label { color: #71717a; font-weight: 500; }
+  .ff-ticker-val { color: #e4e4e7; font-weight: 600; }
+  .ff-ticker-delta { font-size: 9px; }
+  .ff-up { color: #4ade80; }
+  .ff-down { color: #f87171; }
+
+  /* Layout principal */
+  .ff-layout { display: grid; grid-template-columns: 180px 1fr; min-height: 480px; }
+
+  /* Sidebar */
+  .ff-side {
+    background: #0a0a10;
+    border-right: 1px solid #17171f;
+    padding: 16px 10px;
+  }
+  .ff-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    padding: 6px 8px;
+    margin-bottom: 20px;
+  }
+  .ff-logo-box {
+    width: 22px;
+    height: 22px;
+    background: linear-gradient(135deg, #8b5cf6, #6366f1);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ff-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    color: #71717a;
+    margin: 2px 0;
+    transition: all 0.2s;
+  }
+  .ff-nav-item.active {
+    background: #17171f;
+    color: #fff;
+  }
+  .ff-nav-item.active .ff-icon { color: #a78bfa; }
+  .ff-icon { width: 14px; height: 14px; flex-shrink: 0; }
+
+  /* Main */
+  .ff-main { padding: 20px; }
+  .ff-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .ff-title { font-size: 20px; font-weight: 700; color: #fff; }
+  .ff-sub { font-size: 11px; color: #71717a; margin-top: 4px; }
+
+  /* KPI cards */
+  .ff-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; }
+  .ff-kpi {
+    position: relative;
+    padding: 14px;
+    border-radius: 12px;
+    background: linear-gradient(180deg, rgba(139, 92, 246, 0.08), transparent), #0d0d14;
+    border: 1px solid #1a1a22;
+    overflow: hidden;
+  }
+  .ff-kpi.purple { background: linear-gradient(180deg, rgba(139, 92, 246, 0.08), transparent), #0d0d14; }
+  .ff-kpi.green  { background: linear-gradient(180deg, rgba(74, 222, 128, 0.08), transparent), #0d0d14; }
+  .ff-kpi.red    { background: linear-gradient(180deg, rgba(248, 113, 113, 0.08), transparent), #0d0d14; }
+  .ff-kpi.orange { background: linear-gradient(180deg, rgba(251, 146, 60, 0.08), transparent), #0d0d14; }
+
+  .ff-kpi-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .ff-kpi-label { font-size: 9px; color: #a1a1aa; text-transform: uppercase; letter-spacing: 0.5px; }
+  .ff-kpi-icon-box { width: 22px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: #17171f; }
+  .ff-kpi-value { font-size: 17px; font-weight: 700; color: #fff; }
+  .ff-kpi-sub { font-size: 10px; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+
+  .ff-spark { position: absolute; right: 10px; bottom: 10px; width: 50px; height: 18px; opacity: 0.8; }
+
+  /* Charts row */
+  .ff-chart-row { display: grid; grid-template-columns: 2fr 1fr; gap: 10px; }
+  .ff-card {
+    background: #0d0d14;
+    border: 1px solid #1a1a22;
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .ff-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+  }
+  .ff-card-title { font-size: 12px; font-weight: 600; color: #fff; }
+  .ff-card-sub { font-size: 10px; color: #71717a; }
+  .ff-pill {
+    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: #17171f;
+    color: #a1a1aa;
+  }
+
+  /* Área chart placeholder */
+  .ff-area {
+    height: 120px;
+    background:
+      linear-gradient(180deg, rgba(139, 92, 246, 0.15), transparent),
+      url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100" preserveAspectRatio="none"><path d="M0,80 C50,60 100,70 150,50 C200,30 250,40 300,20 C350,10 400,5 400,5 L400,100 L0,100 Z" fill="url(%23g)" opacity="0.4"/><path d="M0,80 C50,60 100,70 150,50 C200,30 250,40 300,20 C350,10 400,5 400,5" stroke="%238b5cf6" stroke-width="2" fill="none"/><defs><linearGradient id="g" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="%238b5cf6"/><stop offset="100%" stop-color="%238b5cf6" stop-opacity="0"/></linearGradient></defs></svg>') no-repeat;
+    background-size: cover;
+    border-radius: 8px;
+    position: relative;
+  }
+
+  /* Donut */
+  .ff-donut-wrap { display: flex; align-items: center; gap: 14px; }
+  .ff-donut-svg { width: 110px; height: 110px; }
+  .ff-legend { font-size: 10px; color: #a1a1aa; }
+  .ff-legend-item { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+  .ff-dot { width: 7px; height: 7px; border-radius: 2px; }
+  .ff-legend-val { color: #fff; margin-left: auto; font-weight: 600; }
+
+  .card-body { padding: 0 !important; }
+</style>
+
+<div class="mockup">
+  <div class="mockup-header">Dashboard v2 — estilo premium tipo FinSpace</div>
+  <div class="mockup-body" style="padding:0">
+    <div class="ff-root">
+      <!-- TICKER -->
+      <div class="ff-ticker">
+        <div class="ff-ticker-item">
+          <span class="ff-ticker-label">BLUE</span>
+          <span class="ff-ticker-val">$1.465</span>
+          <span class="ff-ticker-delta ff-up">+0.34%</span>
+        </div>
+        <div class="ff-ticker-item">
+          <span class="ff-ticker-label">MEP</span>
+          <span class="ff-ticker-val">$1.398</span>
+          <span class="ff-ticker-delta ff-down">-0.12%</span>
+        </div>
+        <div class="ff-ticker-item">
+          <span class="ff-ticker-label">CCL</span>
+          <span class="ff-ticker-val">$1.412</span>
+          <span class="ff-ticker-delta ff-up">+0.05%</span>
+        </div>
+        <div class="ff-ticker-item">
+          <span class="ff-ticker-label">OFICIAL</span>
+          <span class="ff-ticker-val">$1.078</span>
+          <span class="ff-ticker-delta ff-up">+0.01%</span>
+        </div>
+        <div class="ff-ticker-item">
+          <span class="ff-ticker-label">USDT</span>
+          <span class="ff-ticker-val">$1.458</span>
+          <span class="ff-ticker-delta ff-up">+0.22%</span>
+        </div>
+        <div class="ff-ticker-item">
+          <span class="ff-ticker-label">BTC/USD</span>
+          <span class="ff-ticker-val">$94.820</span>
+          <span class="ff-ticker-delta ff-down">-1.4%</span>
+        </div>
+      </div>
+
+      <div class="ff-layout">
+        <!-- SIDEBAR -->
+        <aside class="ff-side">
+          <div class="ff-logo">
+            <div class="ff-logo-box">
+              <svg class="ff-icon" style="color:#fff" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            </div>
+            Finanzas
+          </div>
+          <div class="ff-nav-item active">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
+            Dashboard
+          </div>
+          <div class="ff-nav-item">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M5 9l7-7 7 7M5 15l7 7 7-7"/></svg>
+            Transacciones
+          </div>
+          <div class="ff-nav-item">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+            Ingresos
+          </div>
+          <div class="ff-nav-item">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+            Gastos
+          </div>
+          <div class="ff-nav-item">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            Inversiones
+          </div>
+          <div class="ff-nav-item">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+            Patrimonio
+          </div>
+          <div class="ff-nav-item">
+            <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Reportes
+          </div>
+          <div style="margin-top:14px; padding-top:14px; border-top:1px solid #17171f">
+            <div class="ff-nav-item">
+              <svg class="ff-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+              Ajustes
+            </div>
+          </div>
+        </aside>
+
+        <!-- MAIN -->
+        <div class="ff-main">
+          <div class="ff-header">
+            <div>
+              <div class="ff-title">Dashboard</div>
+              <div class="ff-sub">Administrá y optimizá tu situación financiera</div>
+            </div>
+            <div class="ff-pill">Abril 2026 ▾</div>
+          </div>
+
+          <!-- KPI GRID -->
+          <div class="ff-kpi-grid">
+            <div class="ff-kpi purple">
+              <div class="ff-kpi-head">
+                <div class="ff-kpi-label">Patrimonio Total</div>
+                <div class="ff-kpi-icon-box" style="background:rgba(139,92,246,0.15)">
+                  <svg class="ff-icon" style="color:#a78bfa" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+                </div>
+              </div>
+              <div class="ff-kpi-value">USD 12.450</div>
+              <div class="ff-kpi-sub ff-up">▲ 5,2% vs mes anterior</div>
+              <svg class="ff-spark" viewBox="0 0 50 18"><polyline points="0,15 10,12 20,13 30,8 40,5 50,3" fill="none" stroke="#a78bfa" stroke-width="1.5"/></svg>
+            </div>
+
+            <div class="ff-kpi green">
+              <div class="ff-kpi-head">
+                <div class="ff-kpi-label">Ingresos Abril</div>
+                <div class="ff-kpi-icon-box" style="background:rgba(74,222,128,0.15)">
+                  <svg class="ff-icon" style="color:#4ade80" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
+                </div>
+              </div>
+              <div class="ff-kpi-value">USD 150</div>
+              <div class="ff-kpi-sub" style="color:#a1a1aa">ARS 219.750</div>
+              <svg class="ff-spark" viewBox="0 0 50 18"><polyline points="0,15 10,14 20,10 30,12 40,7 50,5" fill="none" stroke="#4ade80" stroke-width="1.5"/></svg>
+            </div>
+
+            <div class="ff-kpi red">
+              <div class="ff-kpi-head">
+                <div class="ff-kpi-label">Gastos Abril</div>
+                <div class="ff-kpi-icon-box" style="background:rgba(248,113,113,0.15)">
+                  <svg class="ff-icon" style="color:#f87171" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>
+                </div>
+              </div>
+              <div class="ff-kpi-value">ARS 152.933</div>
+              <div class="ff-kpi-sub ff-down">▼ 2,4% vs mes anterior</div>
+              <svg class="ff-spark" viewBox="0 0 50 18"><polyline points="0,5 10,8 20,6 30,10 40,12 50,14" fill="none" stroke="#f87171" stroke-width="1.5"/></svg>
+            </div>
+
+            <div class="ff-kpi orange">
+              <div class="ff-kpi-head">
+                <div class="ff-kpi-label">Balance Mes</div>
+                <div class="ff-kpi-icon-box" style="background:rgba(251,146,60,0.15)">
+                  <svg class="ff-icon" style="color:#fb923c" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+                </div>
+              </div>
+              <div class="ff-kpi-value">+ARS 66.817</div>
+              <div class="ff-kpi-sub ff-up">▲ 22% ahorrado</div>
+              <svg class="ff-spark" viewBox="0 0 50 18"><polyline points="0,12 10,9 20,10 30,6 40,7 50,3" fill="none" stroke="#fb923c" stroke-width="1.5"/></svg>
+            </div>
+          </div>
+
+          <!-- CHARTS -->
+          <div class="ff-chart-row">
+            <div class="ff-card">
+              <div class="ff-card-head">
+                <div>
+                  <div class="ff-card-title">Evolución del Patrimonio</div>
+                  <div class="ff-card-sub">Valor total a lo largo del tiempo</div>
+                </div>
+                <div class="ff-pill">Este Año ▾</div>
+              </div>
+              <div class="ff-area"></div>
+            </div>
+
+            <div class="ff-card">
+              <div class="ff-card-head">
+                <div class="ff-card-title">Asignación de Activos</div>
+              </div>
+              <div class="ff-donut-wrap">
+                <svg class="ff-donut-svg" viewBox="0 0 42 42">
+                  <circle cx="21" cy="21" r="15.9" fill="none" stroke="#17171f" stroke-width="6"/>
+                  <circle cx="21" cy="21" r="15.9" fill="none" stroke="#8b5cf6" stroke-width="6" stroke-dasharray="45 55" stroke-dashoffset="25" transform="rotate(-90 21 21)"/>
+                  <circle cx="21" cy="21" r="15.9" fill="none" stroke="#4ade80" stroke-width="6" stroke-dasharray="35 65" stroke-dashoffset="-20" transform="rotate(-90 21 21)"/>
+                  <circle cx="21" cy="21" r="15.9" fill="none" stroke="#fb923c" stroke-width="6" stroke-dasharray="20 80" stroke-dashoffset="-55" transform="rotate(-90 21 21)"/>
+                </svg>
+                <div class="ff-legend" style="flex:1">
+                  <div class="ff-legend-item"><span class="ff-dot" style="background:#8b5cf6"></span>USD Cash<span class="ff-legend-val">45%</span></div>
+                  <div class="ff-legend-item"><span class="ff-dot" style="background:#4ade80"></span>Inversiones<span class="ff-legend-val">35%</span></div>
+                  <div class="ff-legend-item"><span class="ff-dot" style="background:#fb923c"></span>ARS Líquido<span class="ff-legend-val">20%</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:20px; padding:14px; background:#111; border-radius:8px; border:1px solid #222">
+  <h3 style="margin:0 0 6px 0">¿Qué cambió vs antes?</h3>
+  <ul style="font-size:12px; color:#bbb; margin:0; padding-left:18px; line-height:1.6">
+    <li><strong>Sin emojis</strong>: todos los iconos ahora son SVG limpios (Lucide Icons — el mismo pack que usan las apps premium)</li>
+    <li><strong>Ticker arriba</strong>: cotizaciones en vivo siempre visibles (Blue, MEP, CCL, Oficial, USDT, BTC)</li>
+    <li><strong>Acentos sutiles por KPI</strong>: púrpura / verde / rojo / naranja con glow suave, no saturado</li>
+    <li><strong>Sparklines en cards</strong>: mini-gráfico de tendencia dentro de cada KPI</li>
+    <li><strong>Tipografía Inter</strong>: sans-serif moderna, igual que Linear / Vercel / Stripe</li>
+    <li><strong>Componentes de 21st.dev</strong>: usaremos cards, charts y sidebar de ahí para acelerar</li>
+  </ul>
+</div>

@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Backgrounds */
+    --bg: 240 20% 4%;            /* #08080c */
+    --bg-elevated: 240 23% 6%;   /* #0d0d14 */
+    --bg-sunken: 240 25% 5%;     /* #0a0a10 */
+
+    /* Borders */
+    --border: 240 14% 12%;       /* #1a1a22 */
+    --border-subtle: 240 14% 10%;/* #17171f */
+
+    /* Text */
+    --fg: 240 6% 90%;            /* #e4e4e7 */
+    --fg-muted: 240 5% 65%;      /* #a1a1aa */
+    --fg-subtle: 240 5% 46%;     /* #71717a */
+
+    /* Accent */
+    --accent: 258 90% 66%;       /* #8b5cf6 */
+    --accent-foreground: 0 0% 100%;
+
+    /* Semantic */
+    --positive: 142 76% 64%;     /* #4ade80 */
+    --negative: 0 91% 71%;       /* #f87171 */
+    --warning: 25 95% 64%;       /* #fb923c */
+    --info: 217 91% 60%;         /* #3b82f6 */
+
+    /* shadcn-compat */
+    --card: 240 23% 6%;
+    --card-foreground: 240 6% 90%;
+    --popover: 240 23% 6%;
+    --popover-foreground: 240 6% 90%;
+    --muted: 240 14% 10%;
+    --muted-foreground: 240 5% 65%;
+    --destructive: 0 91% 71%;
+    --destructive-foreground: 0 0% 100%;
+    --input: 240 14% 12%;
+    --ring: 258 90% 66%;
+
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html, body {
+    @apply bg-bg text-fg;
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+  }
+
+  body {
+    @apply antialiased;
+  }
+}
+
+@layer utilities {
+  .glass {
+    background: linear-gradient(180deg, rgba(139, 92, 246, 0.06), transparent), hsl(var(--bg-elevated));
+  }
+  .glass-green {
+    background: linear-gradient(180deg, rgba(74, 222, 128, 0.08), transparent), hsl(var(--bg-elevated));
+  }
+  .glass-red {
+    background: linear-gradient(180deg, rgba(248, 113, 113, 0.08), transparent), hsl(var(--bg-elevated));
+  }
+  .glass-orange {
+    background: linear-gradient(180deg, rgba(251, 146, 60, 0.08), transparent), hsl(var(--bg-elevated));
+  }
+
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { scrollbar-width: none; }
+
+  .tabular-num { font-variant-numeric: tabular-nums; }
+}

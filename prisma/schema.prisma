@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // Postgres en producción (Vercel/Neon/Supabase). Para dev local también
+  // se recomienda Postgres — Neon ofrece una rama gratis. SQLite ya no se
+  // soporta porque Vercel tiene filesystem efímero.
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // directUrl se usa SOLO para migraciones (`prisma migrate`); los providers
+  // con pooling (Neon, Supabase) requieren la URL directa para que Prisma
+  // pueda crear schemas/columnas. Si tu provider no usa pooling, podés
+  // dejarlo igual a DATABASE_URL.
+  directUrl = env("DIRECT_URL")
+}
+
+model Transaction {
+  id         Int      @id @default(autoincrement())
+  date       DateTime
+  type       String   // 'income' | 'expense'
+  amount     Decimal
+  currency   String   // 'USD' | 'ARS'
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@index([date])
+  @@index([categoryId])
+  @@index([type])
+}
+
+model Category {
+  id           Int           @id @default(autoincrement())
+  name         String        @unique
+  kind         String        // 'fixed' | 'variable' | 'income'
+  icon         String
+  color        String
+  isRecurring  Boolean       @default(false)
+  transactions Transaction[]
+}
+
+model Asset {
+  id           Int       @id @default(autoincrement())
+  name         String
+  type         String    // 'cash_usd' | 'cash_ars' | 'stock' | 'crypto' | 'property' | 'other'
+  // Discriminador para separar las cuentas/wallets que se muestran en
+  // Patrimonio de las posiciones (CEDEARs, cripto) que se muestran en
+  // Inversiones. 'wallet' = saldo en banco/wallet; 'investment' = posición
+  // de inversión con cotización en vivo.
+  kind         String    @default("investment") // 'wallet' | 'investment'
+  quantity     Decimal
+  ticker       String?
+  priceSource  String?   // 'manual' | 'coinmarketcap' ('yahoo'/'coingecko' legado)
+  manualValue  Decimal?
+  currency     String    // 'USD' | 'ARS'
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Liability {
+  id       Int       @id @default(autoincrement())
+  name     String
+  amount   Decimal
+  currency String    // 'USD' | 'ARS'
+  dueDate  DateTime?
+  note     String?
+}
+
+model ExchangeRate {
+  id         Int      @id @default(autoincrement())
+  type       String   // 'oficial' | 'blue' | 'mep' | 'ccl' | 'usdt'
+  buyPrice   Decimal
+  sellPrice  Decimal
+  fetchedAt  DateTime @default(now())
+
+  @@index([type, fetchedAt])
+}
+
+model MarketPrice {
+  id            Int      @id @default(autoincrement())
+  ticker        String
+  price         Decimal
+  changePct24h  Decimal
+  fetchedAt     DateTime @default(now())
+
+  @@index([ticker, fetchedAt])
+}
+
+model Snapshot {
+  id                Int      @id @default(autoincrement())
+  date              DateTime @unique
+  assetsUsd         Decimal
+  liabilitiesUsd    Decimal
+  netWorthUsd       Decimal
+  exchangeRateUsed  Decimal
+  createdAt         DateTime @default(now())
+}
+
+model TickerItem {
+  id           Int     @id @default(autoincrement())
+  displayLabel String
+  sourceType   String  // 'fx_ars' | 'fx_usd' | 'crypto' | 'stock' | 'index'
+  sourceKey    String
+  orderIndex   Int
+  isVisible    Boolean @default(true)
+
+  @@index([orderIndex])
+}
+
+model Setting {
+  key   String @id
+  value String
+}
+
+// --- Asistente (chat multi-conversación) --------------------------------
+// Mantenemos cada "chat" como una Conversation con Messages ordenados por
+// createdAt. Esto habilita el sidebar estilo Claude.ai con varios chats
+// guardados y la opción de borrarlos.
+
+model Conversation {
+  id        Int       @id @default(autoincrement())
+  title     String    @default("Nueva conversación")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  messages  Message[]
+
+  @@index([updatedAt])
+}
+
+model Message {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  // Roles siguen la convención de Anthropic: 'user' | 'assistant'.
+  role           String
+  // Texto visible del mensaje (lo que se muestra en la UI).
+  content        String
+  // Contenido estructurado opcional en JSON — usado para guardar acciones
+  // de tool_use que hizo el asistente (ej. creó una categoría y una
+  // transacción) para poder mostrarlas en la UI como "chips" informativos.
+  toolActions    String?
+  // Imagen adjunta al mensaje del usuario (base64). Solo se guarda si el
+  // usuario subió una captura junto al mensaje — para mantener el flujo
+  // reproducible al recargar el chat.
+  imageData      String?
+  imageMediaType String?
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+}
