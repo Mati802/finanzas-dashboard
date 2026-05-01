@@ -1,7 +1,7 @@
 import { subMonths, startOfMonth, format as dfFormat } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { computeNetWorth, listAssetsWithValues, listLiabilities } from '@/lib/queries/portfolio';
-import { db } from '@/lib/db';
+import { db, safeDbCall } from '@/lib/db';
 import { PatrimonioView } from './PatrimonioView';
 import { ASSET_TYPE_LABELS } from '@/lib/types';
 import type { AssetType } from '@/lib/types';
@@ -20,10 +20,14 @@ export async function PatrimonioPage() {
     computeNetWorth(),
     listAssetsWithValues(),
     listLiabilities(),
-    db.snapshot.findMany({
-      where: { date: { gte: subMonths(startOfMonth(new Date()), 23) } },
-      orderBy: { date: 'asc' },
-    }),
+    safeDbCall(
+      () =>
+        db.snapshot.findMany({
+          where: { date: { gte: subMonths(startOfMonth(new Date()), 23) } },
+          orderBy: { date: 'asc' },
+        }),
+      []
+    ),
   ]);
 
   // Build 24-month history, picking last snapshot per month.

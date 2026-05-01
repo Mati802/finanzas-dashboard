@@ -1,5 +1,5 @@
 import 'server-only';
-import { db } from '@/lib/db';
+import { db, isDatabaseConfigured } from '@/lib/db';
 import {
   getDefaultRateType,
   getLatestRate,
@@ -46,11 +46,20 @@ export interface AssetWithValue {
  * se usa `manualValue` directamente.
  */
 export async function listAssetsWithValues(): Promise<AssetWithValue[]> {
-  const [assets, marketPrices, allRates] = await Promise.all([
-    db.asset.findMany({ orderBy: { createdAt: 'asc' } }),
-    db.marketPrice.findMany({ orderBy: { fetchedAt: 'desc' } }),
-    getAllLatestRates(),
-  ]);
+  if (!isDatabaseConfigured()) return [];
+  let assets: Asset[];
+  let marketPrices: { ticker: string; price: unknown; changePct24h: unknown; fetchedAt: Date }[];
+  let allRates;
+  try {
+    [assets, marketPrices, allRates] = await Promise.all([
+      db.asset.findMany({ orderBy: { createdAt: 'asc' } }),
+      db.marketPrice.findMany({ orderBy: { fetchedAt: 'desc' } }),
+      getAllLatestRates(),
+    ]);
+  } catch (err) {
+    console.warn('[portfolio] DB query failed, returning empty', err);
+    return [];
+  }
 
   // Build latest-by-ticker map (findMany ordered desc, so the first entry per ticker is the latest).
   // La key es uppercase para que matchee sin importar el casing (BTC vs btc vs Btc).
@@ -140,7 +149,13 @@ export async function listAssetsWithValues(): Promise<AssetWithValue[]> {
 
 /** Devuelve todas las deudas (sin procesar). */
 export async function listLiabilities(): Promise<Liability[]> {
-  return db.liability.findMany({ orderBy: [{ dueDate: 'asc' }, { id: 'asc' }] });
+  if (!isDatabaseConfigured()) return [];
+  try {
+    return await db.liability.findMany({ orderBy: [{ dueDate: 'asc' }, { id: 'asc' }] });
+  } catch (err) {
+    console.warn('[portfolio] listLiabilities failed', err);
+    return [];
+  }
 }
 
 export interface NetWorth {
@@ -159,11 +174,34 @@ export interface NetWorth {
  * usan la tasa por defecto.
  */
 export async function computeNetWorth(): Promise<NetWorth> {
-  const [assets, liabilities, rateType] = await Promise.all([
-    listAssetsWithValues(),
-    listLiabilities(),
-    getDefaultRateType(),
-  ]);
+  if (!isDatabaseConfigured()) {
+    return {
+      assetsUsd: 0,
+      liabilitiesUsd: 0,
+      netWorthUsd: 0,
+      rateType: 'blue',
+      exchangeRateUsed: 1,
+    };
+  }
+  let assets: AssetWithValue[];
+  let liabilities: Liability[];
+  let rateType: RateType;
+  try {
+    [assets, liabilities, rateType] = await Promise.all([
+      listAssetsWithValues(),
+      listLiabilities(),
+      getDefaultRateType(),
+    ]);
+  } catch (err) {
+    console.warn('[portfolio] computeNetWorth failed', err);
+    return {
+      assetsUsd: 0,
+      liabilitiesUsd: 0,
+      netWorthUsd: 0,
+      rateType: 'blue',
+      exchangeRateUsed: 1,
+    };
+  }
 
   const rate = (await getLatestRate(rateType)) ?? (await getLatestRate('blue'));
   if (!rate) {

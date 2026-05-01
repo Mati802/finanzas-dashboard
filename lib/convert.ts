@@ -1,5 +1,5 @@
 import type { Currency, RateType } from './types';
-import { db } from './db';
+import { db, isDatabaseConfigured } from './db';
 
 export type RatesMap = Partial<Record<RateType, { buy: number; sell: number }>>;
 
@@ -12,15 +12,21 @@ const STABLECOIN_TICKERS = new Set(['USDT', 'USDC', 'DAI', 'BUSD', 'TUSD', 'USDD
  * activo sin hacer múltiples queries.
  */
 export async function getAllLatestRates(): Promise<RatesMap> {
-  const rows = await db.exchangeRate.findMany({
-    orderBy: { fetchedAt: 'desc' },
-    distinct: ['type'],
-  });
-  const out: RatesMap = {};
-  for (const r of rows) {
-    out[r.type as RateType] = { buy: Number(r.buyPrice), sell: Number(r.sellPrice) };
+  if (!isDatabaseConfigured()) return {};
+  try {
+    const rows = await db.exchangeRate.findMany({
+      orderBy: { fetchedAt: 'desc' },
+      distinct: ['type'],
+    });
+    const out: RatesMap = {};
+    for (const r of rows) {
+      out[r.type as RateType] = { buy: Number(r.buyPrice), sell: Number(r.sellPrice) };
+    }
+    return out;
+  } catch (err) {
+    console.warn('[convert] getAllLatestRates failed', err);
+    return {};
   }
-  return out;
 }
 
 /**
@@ -73,12 +79,18 @@ export function pickRate(
  * Devuelve `null` si no hay registros.
  */
 export async function getLatestRate(type: RateType): Promise<{ buy: number; sell: number } | null> {
-  const row = await db.exchangeRate.findFirst({
-    where: { type },
-    orderBy: { fetchedAt: 'desc' },
-  });
-  if (!row) return null;
-  return { buy: Number(row.buyPrice), sell: Number(row.sellPrice) };
+  if (!isDatabaseConfigured()) return null;
+  try {
+    const row = await db.exchangeRate.findFirst({
+      where: { type },
+      orderBy: { fetchedAt: 'desc' },
+    });
+    if (!row) return null;
+    return { buy: Number(row.buyPrice), sell: Number(row.sellPrice) };
+  } catch (err) {
+    console.warn('[convert] getLatestRate failed', err);
+    return null;
+  }
 }
 
 /**
@@ -86,8 +98,14 @@ export async function getLatestRate(type: RateType): Promise<{ buy: number; sell
  * Si no hay setting, usa 'blue'.
  */
 export async function getDefaultRateType(): Promise<RateType> {
-  const row = await db.setting.findUnique({ where: { key: 'default_rate_type' } });
-  return ((row?.value as RateType) ?? 'blue') as RateType;
+  if (!isDatabaseConfigured()) return 'blue';
+  try {
+    const row = await db.setting.findUnique({ where: { key: 'default_rate_type' } });
+    return ((row?.value as RateType) ?? 'blue') as RateType;
+  } catch (err) {
+    console.warn('[convert] getDefaultRateType failed', err);
+    return 'blue';
+  }
 }
 
 /**

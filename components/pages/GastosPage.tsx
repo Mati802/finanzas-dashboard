@@ -1,4 +1,4 @@
-import { db } from '@/lib/db';
+import { db, safeDbCall } from '@/lib/db';
 import { listTransactionsByMonth } from '@/lib/queries/transactions';
 import { GastosView } from './GastosView';
 import { AddTransactionButton } from './AddTransactionButton';
@@ -14,7 +14,7 @@ export async function GastosPage({
 
   const [transactions, recurringCategories] = await Promise.all([
     listTransactionsByMonth(year, month),
-    db.category.findMany({ where: { isRecurring: true } }),
+    safeDbCall(() => db.category.findMany({ where: { isRecurring: true } }), []),
   ]);
 
   const expenses = transactions.filter((t) => t.type === 'expense');

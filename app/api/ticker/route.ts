@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { db, isDatabaseConfigured } from '@/lib/db';
 import {
   refreshRatesIfStale,
   refreshMarketPricesIfStale,
@@ -18,14 +18,23 @@ type TickerPayloadItem = {
 };
 
 export async function GET() {
+  if (!isDatabaseConfigured()) {
+    return NextResponse.json({ items: [] });
+  }
   // Attempt background refresh (silently ignore failures so the UI still renders).
   await Promise.allSettled([refreshRatesIfStale(), refreshMarketPricesIfStale()]);
 
-  const [rates, prices, items] = await Promise.all([
-    getLatestExchangeRates(),
-    getLatestMarketPrices(),
-    db.tickerItem.findMany({ where: { isVisible: true }, orderBy: { orderIndex: 'asc' } }),
-  ]);
+  let rates, prices, items;
+  try {
+    [rates, prices, items] = await Promise.all([
+      getLatestExchangeRates(),
+      getLatestMarketPrices(),
+      db.tickerItem.findMany({ where: { isVisible: true }, orderBy: { orderIndex: 'asc' } }),
+    ]);
+  } catch (err) {
+    console.warn('[api/ticker] DB query failed', err);
+    return NextResponse.json({ items: [] });
+  }
 
   const rateByType = new Map(rates.map((r) => [r.type as RateType, r]));
   const priceByTicker = new Map(prices.map((p) => [p.ticker, p]));

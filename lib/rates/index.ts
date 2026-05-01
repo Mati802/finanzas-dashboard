@@ -1,4 +1,4 @@
-import { db } from '@/lib/db';
+import { db, isDatabaseConfigured } from '@/lib/db';
 import type { RateType, TickerSourceType } from '@/lib/types';
 import { fetchDolarApiRates, type NormalizedRate } from './dolarapi';
 import { fetchCoinMarketCapPrices } from './coinmarketcap';
@@ -16,17 +16,29 @@ function minutesAgo(date: Date): number {
 }
 
 export async function getLatestExchangeRates() {
-  return db.exchangeRate.findMany({
-    orderBy: { fetchedAt: 'desc' },
-    distinct: ['type'],
-  });
+  if (!isDatabaseConfigured()) return [];
+  try {
+    return await db.exchangeRate.findMany({
+      orderBy: { fetchedAt: 'desc' },
+      distinct: ['type'],
+    });
+  } catch (err) {
+    console.warn('[rates] getLatestExchangeRates failed', err);
+    return [];
+  }
 }
 
 export async function getLatestMarketPrices() {
-  return db.marketPrice.findMany({
-    orderBy: { fetchedAt: 'desc' },
-    distinct: ['ticker'],
-  });
+  if (!isDatabaseConfigured()) return [];
+  try {
+    return await db.marketPrice.findMany({
+      orderBy: { fetchedAt: 'desc' },
+      distinct: ['ticker'],
+    });
+  } catch (err) {
+    console.warn('[rates] getLatestMarketPrices failed', err);
+    return [];
+  }
 }
 
 export async function refreshExchangeRates(): Promise<NormalizedRate[]> {

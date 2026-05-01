@@ -1,12 +1,12 @@
-import { db } from '@/lib/db';
+import { db, safeDbCall } from '@/lib/db';
 import { getDefaultRateType } from '@/lib/convert';
 import { AjustesView } from './AjustesView';
 
 export async function AjustesPage() {
   const [defaultRateType, categories, tickerItems] = await Promise.all([
     getDefaultRateType(),
-    db.category.findMany({ orderBy: [{ kind: 'asc' }, { name: 'asc' }] }),
-    db.tickerItem.findMany({ orderBy: { orderIndex: 'asc' } }),
+    safeDbCall(() => db.category.findMany({ orderBy: [{ kind: 'asc' }, { name: 'asc' }] }), []),
+    safeDbCall(() => db.tickerItem.findMany({ orderBy: { orderIndex: 'asc' } }), []),
   ]);
 
   return (

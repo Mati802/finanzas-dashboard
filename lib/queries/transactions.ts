@@ -1,5 +1,5 @@
 import 'server-only';
-import { db } from '@/lib/db';
+import { db, isDatabaseConfigured } from '@/lib/db';
 import type { Currency, TransactionType } from '@/lib/types';
 
 export interface TransactionWithCategory {
@@ -31,12 +31,19 @@ export async function listTransactionsByMonth(
   year: number,
   month: number
 ): Promise<TransactionWithCategory[]> {
+  if (!isDatabaseConfigured()) return [];
   const { start, end } = monthBounds(year, month);
-  const rows = await db.transaction.findMany({
-    where: { date: { gte: start, lt: end } },
-    include: { category: true },
-    orderBy: [{ date: 'desc' }, { id: 'desc' }],
-  });
+  let rows;
+  try {
+    rows = await db.transaction.findMany({
+      where: { date: { gte: start, lt: end } },
+      include: { category: true },
+      orderBy: [{ date: 'desc' }, { id: 'desc' }],
+    });
+  } catch (err) {
+    console.warn('[transactions] listTransactionsByMonth failed', err);
+    return [];
+  }
   return rows.map((r) => ({
     id: r.id,
     date: r.date,
@@ -58,13 +65,20 @@ export async function listTransactionsByMonth(
 }
 
 export async function listTransactionsByYear(year: number): Promise<TransactionWithCategory[]> {
+  if (!isDatabaseConfigured()) return [];
   const start = new Date(Date.UTC(year, 0, 1));
   const end = new Date(Date.UTC(year + 1, 0, 1));
-  const rows = await db.transaction.findMany({
-    where: { date: { gte: start, lt: end } },
-    include: { category: true },
-    orderBy: [{ date: 'desc' }, { id: 'desc' }],
-  });
+  let rows;
+  try {
+    rows = await db.transaction.findMany({
+      where: { date: { gte: start, lt: end } },
+      include: { category: true },
+      orderBy: [{ date: 'desc' }, { id: 'desc' }],
+    });
+  } catch (err) {
+    console.warn('[transactions] listTransactionsByYear failed', err);
+    return [];
+  }
   return rows.map((r) => ({
     id: r.id,
     date: r.date,
@@ -96,6 +110,13 @@ export interface MonthlyTotals {
  * Todos los montos se convierten a USD usando la tasa default almacenada.
  */
 export async function getMonthlyTotals(year: number): Promise<MonthlyTotals[]> {
+  const totals: MonthlyTotals[] = Array.from({ length: 12 }, (_, i) => ({
+    month: i + 1,
+    income: 0,
+    expense: 0,
+  }));
+  if (!isDatabaseConfigured()) return totals;
+
   const { getLatestRate, getDefaultRateType, convert } = await import('@/lib/convert');
   const rateType = await getDefaultRateType();
   const rate = (await getLatestRate(rateType)) ?? (await getLatestRate('blue'));
@@ -103,16 +124,16 @@ export async function getMonthlyTotals(year: number): Promise<MonthlyTotals[]> {
 
   const start = new Date(Date.UTC(year, 0, 1));
   const end = new Date(Date.UTC(year + 1, 0, 1));
-  const rows = await db.transaction.findMany({
-    where: { date: { gte: start, lt: end } },
-    select: { date: true, type: true, amount: true, currency: true },
-  });
-
-  const totals: MonthlyTotals[] = Array.from({ length: 12 }, (_, i) => ({
-    month: i + 1,
-    income: 0,
-    expense: 0,
-  }));
+  let rows;
+  try {
+    rows = await db.transaction.findMany({
+      where: { date: { gte: start, lt: end } },
+      select: { date: true, type: true, amount: true, currency: true },
+    });
+  } catch (err) {
+    console.warn('[transactions] getMonthlyTotals failed', err);
+    return totals;
+  }
 
   for (const r of rows) {
     const m = r.date.getUTCMonth();

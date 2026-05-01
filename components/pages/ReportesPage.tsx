@@ -1,4 +1,4 @@
-import { db } from '@/lib/db';
+import { db, safeDbCall } from '@/lib/db';
 import { ReportesView } from './ReportesView';
 import { convert, getDefaultRateType, getLatestRate } from '@/lib/convert';
 import type { Currency } from '@/lib/types';
@@ -20,19 +20,25 @@ export async function ReportesPage({
   const rate = (await getLatestRate(rateType)) ?? (await getLatestRate('blue'));
   const effective = rate ?? { buy: 1, sell: 1 };
 
-  const [transactions, categories] = await Promise.all([
-    db.transaction.findMany({
-      where: {
-        date: {
-          gte: new Date(from + 'T00:00:00.000Z'),
-          lte: new Date(to + 'T23:59:59.999Z'),
+  let transactions: Awaited<ReturnType<typeof db.transaction.findMany<{ include: { category: true } }>>> = [];
+  let categories: Awaited<ReturnType<typeof db.category.findMany>> = [];
+  try {
+    [transactions, categories] = await Promise.all([
+      db.transaction.findMany({
+        where: {
+          date: {
+            gte: new Date(from + 'T00:00:00.000Z'),
+            lte: new Date(to + 'T23:59:59.999Z'),
+          },
         },
-      },
-      include: { category: true },
-      orderBy: { date: 'asc' },
-    }),
-    db.category.findMany(),
-  ]);
+        include: { category: true },
+        orderBy: { date: 'asc' },
+      }),
+      db.category.findMany(),
+    ]);
+  } catch (err) {
+    console.warn('[reportes] DB query failed, rendering empty', err);
+  }
 
   const rows = transactions.map((t) => ({
     id: t.id,

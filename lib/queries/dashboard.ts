@@ -1,7 +1,7 @@
 import 'server-only';
 import { subMonths, startOfMonth, format as dfFormat } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { db } from '@/lib/db';
+import { db, isDatabaseConfigured } from '@/lib/db';
 import { convert, getDefaultRateType, getLatestRate } from '@/lib/convert';
 import { computeNetWorth, listAssetsWithValues } from './portfolio';
 import { formatARS } from '@/lib/format';
@@ -53,7 +53,42 @@ const ASSET_COLORS: Record<AssetType, string> = {
   other: '#71717a',
 };
 
+/** Fallback vacío para cuando no hay DB configurada o queries fallan. */
+function emptyDashboard(): DashboardData {
+  return {
+    netWorth: { valueUsd: 0, valueArs: '$0', trendPct: null },
+    monthlyIncome: { valueUsd: 0, valueArs: '$0', trendPct: null },
+    monthlyExpense: { valueUsd: 0, valueArs: '$0', trendPct: null },
+    monthlySavings: { valueUsd: 0, valueArs: '$0', rate: 0, trendPct: null },
+    netWorthHistory: [],
+    yearComparison: [],
+    cashflow: [],
+    categoryBreakdown: [],
+    assetBreakdown: [],
+    netWorthBreakdown: {
+      walletsUsd: 0,
+      investmentsUsd: 0,
+      objectsUsd: 0,
+      liabilitiesUsd: 0,
+      totalAssetsUsd: 0,
+      walletCount: 0,
+      investmentCount: 0,
+      objectCount: 0,
+    },
+  };
+}
+
 export async function getDashboardData(): Promise<DashboardData> {
+  if (!isDatabaseConfigured()) return emptyDashboard();
+  try {
+    return await getDashboardDataInner();
+  } catch (err) {
+    console.warn('[dashboard] query failed, returning empty data', err);
+    return emptyDashboard();
+  }
+}
+
+async function getDashboardDataInner(): Promise<DashboardData> {
   const now = new Date();
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth();

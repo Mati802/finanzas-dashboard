@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { db } from '@/lib/db';
+import { db, isDatabaseConfigured } from '@/lib/db';
 
 const CategorySchema = z.object({
   id: z.number().int().positive().optional(),
@@ -66,5 +66,11 @@ export async function deleteCategory(id: number) {
 }
 
 export async function listCategories() {
-  return db.category.findMany({ orderBy: [{ kind: 'asc' }, { name: 'asc' }] });
+  if (!isDatabaseConfigured()) return [];
+  try {
+    return await db.category.findMany({ orderBy: [{ kind: 'asc' }, { name: 'asc' }] });
+  } catch (err) {
+    console.warn('[categories] listCategories failed', err);
+    return [];
+  }
 }
