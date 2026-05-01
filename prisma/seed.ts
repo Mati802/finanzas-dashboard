@@ -8,10 +8,22 @@ import {
   TICKER_ITEMS,
 } from './seed-data';
 
-const db = new PrismaClient();
+function resolveDbUrl(): string {
+  return (
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL ||
+    ''
+  );
+}
+
+const dbUrl = resolveDbUrl();
+const db = dbUrl
+  ? new PrismaClient({ datasources: { db: { url: dbUrl } } })
+  : new PrismaClient();
 
 function isDatabaseConfigured(): boolean {
-  const url = process.env.DATABASE_URL ?? '';
+  const url = resolveDbUrl();
   if (!url) return false;
   if (url.includes('user:password@')) return false;
   if (url.includes('stub:stub@')) return false;
