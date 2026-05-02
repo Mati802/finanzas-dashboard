@@ -21,15 +21,17 @@ const STABLECOIN_TICKERS = new Set([
 /**
  * Determina el `kind` (wallet | investment | object) de un asset.
  *
- * Algunos tipos son inequívocos y se fuerzan: un CEDEAR (type='stock') es
- * SIEMPRE una inversión; una propiedad (type='property') es SIEMPRE un objeto;
- * el efectivo (type='cash_usd'|'cash_ars') es SIEMPRE una wallet. Esto evita
- * que filas legacy con `kind` mal seteado o vacío contaminen el desglose del
- * patrimonio en el dashboard (donde inversiones se sumaban en cuentas/bancos).
+ * La clasificación se hace por la naturaleza del activo, no por lo que
+ * tenga guardado en DB. Esto evita que filas con `kind` legacy o mal
+ * seteado contaminen el desglose del patrimonio en el dashboard (donde
+ * inversiones aparecían sumadas en "Cuentas / Bancos"):
  *
- * Para cripto sí respetamos lo que eligió el usuario, porque USDT en un
- * exchange puede ser wallet o investment según el caso. Si no hay valor
- * almacenado, inferimos: stablecoin → wallet, resto → investment.
+ *  - CEDEAR (type='stock')                  → siempre investment
+ *  - propiedad/auto (type='property')       → siempre object
+ *  - efectivo USD/ARS (type='cash_*')       → siempre wallet
+ *  - crypto + ticker stablecoin (USDT…)    → siempre wallet (vale ~1 USD)
+ *  - crypto + ticker no-stablecoin (BTC…)  → siempre investment
+ *  - resto (other / crypto sin ticker)     → respeta storedKind, fallback wallet
  */
 function resolveAssetKind(
   type: AssetType,
@@ -40,13 +42,13 @@ function resolveAssetKind(
   if (type === 'property') return 'object';
   if (type === 'cash_usd' || type === 'cash_ars') return 'wallet';
 
-  if (storedKind === 'wallet' || storedKind === 'investment' || storedKind === 'object') {
-    return storedKind;
-  }
-
   if (type === 'crypto') {
     const t = ticker?.toUpperCase() ?? '';
-    return t && STABLECOIN_TICKERS.has(t) ? 'wallet' : 'investment';
+    if (t) return STABLECOIN_TICKERS.has(t) ? 'wallet' : 'investment';
+  }
+
+  if (storedKind === 'wallet' || storedKind === 'investment' || storedKind === 'object') {
+    return storedKind;
   }
   return 'wallet';
 }
